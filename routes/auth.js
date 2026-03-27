@@ -1,14 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const Database = require('better-sqlite3');
-const path = require('path');
+const db = require('../database/db');
 
 const router = express.Router();
-const db = new Database(path.join(__dirname, '..', 'database', 'leave_calendar.db'));
-db.pragma('journal_mode = WAL');
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -16,7 +13,8 @@ router.post('/login', (req, res) => {
             return res.status(400).json({ error: 'Username and password are required.' });
         }
 
-        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid username or password.' });

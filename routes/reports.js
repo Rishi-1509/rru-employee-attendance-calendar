@@ -1,15 +1,12 @@
 const express = require('express');
-const Database = require('better-sqlite3');
-const path = require('path');
+const db = require('../database/db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-const db = new Database(path.join(__dirname, '..', 'database', 'leave_calendar.db'));
-db.pragma('journal_mode = WAL');
 
 // GET /api/reports/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Returns leave summary for all faculty within a date range
-router.get('/summary', requireAuth, requireRole('admin', 'authority'), (req, res) => {
+router.get('/summary', requireAuth, requireRole('admin', 'authority'), async (req, res) => {
     try {
         const { from, to } = req.query;
 
@@ -17,25 +14,27 @@ router.get('/summary', requireAuth, requireRole('admin', 'authority'), (req, res
             return res.status(400).json({ error: '"from" and "to" date parameters are required.' });
         }
 
-        const summary = db.prepare(`
+        const result = await db.query(`
             SELECT
                 u.id,
                 u.full_name,
                 u.department,
                 u.designation,
-                COUNT(l.id) AS total_leaves,
-                SUM(CASE WHEN l.leave_type = 'casual' THEN 1 ELSE 0 END) AS casual_leaves,
-                SUM(CASE WHEN l.leave_type = 'medical' THEN 1 ELSE 0 END) AS medical_leaves,
-                SUM(CASE WHEN l.leave_type = 'earned' THEN 1 ELSE 0 END) AS earned_leaves,
-                SUM(CASE WHEN l.leave_type = 'duty' THEN 1 ELSE 0 END) AS duty_leaves,
-                SUM(CASE WHEN l.leave_type = 'other' THEN 1 ELSE 0 END) AS other_leaves
+                COUNT(l.id)::int AS total_leaves,
+                SUM(CASE WHEN l.leave_type = 'casual' THEN 1 ELSE 0 END)::int AS casual_leaves,
+                SUM(CASE WHEN l.leave_type = 'medical' THEN 1 ELSE 0 END)::int AS medical_leaves,
+                SUM(CASE WHEN l.leave_type = 'earned' THEN 1 ELSE 0 END)::int AS earned_leaves,
+                SUM(CASE WHEN l.leave_type = 'duty' THEN 1 ELSE 0 END)::int AS duty_leaves,
+                SUM(CASE WHEN l.leave_type = 'other' THEN 1 ELSE 0 END)::int AS other_leaves
             FROM users u
             LEFT JOIN leaves l ON u.id = l.faculty_id
-                AND l.leave_date >= ? AND l.leave_date <= ?
+                AND l.leave_date >= $1 AND l.leave_date <= $2
             WHERE u.role = 'faculty'
             GROUP BY u.id
             ORDER BY u.full_name ASC
-        `).all(from, to);
+        `, [from, to]);
+
+        const summary = result.rows;
 
         // Calculate working days in range (approx, excluding weekends)
         const start = new Date(from);
@@ -46,14 +45,23 @@ router.get('/summary', requireAuth, requireRole('admin', 'authority'), (req, res
             if (day !== 0 && day !== 6) workingDays++;
         }
 
-        const enriched = summary.map(s => ({
-            ...s,
-            working_days: workingDays,
-            present_days: workingDays - s.total_leaves,
-            attendance_percentage: workingDays > 0
-                ? Math.round(((workingDays - s.total_leaves) / workingDays) * 100 * 10) / 10
-                : 100
-        }));
+        const enriched = summary.map(s => {
+            const total = parseInt(s.total_leaves) || 0;
+            return {
+                ...s,
+                total_leaves: total,
+                casual_leaves: parseInt(s.casual_leaves) || 0,
+                medical_leaves: parseInt(s.medical_leaves) || 0,
+                earned_leaves: parseInt(s.earned_leaves) || 0,
+                duty_leaves: parseInt(s.duty_leaves) || 0,
+                other_leaves: parseInt(s.other_leaves) || 0,
+                working_days: workingDays,
+                present_days: workingDays - total,
+                attendance_percentage: workingDays > 0
+                    ? Math.round(((workingDays - total) / workingDays) * 100 * 10) / 10
+                    : 100
+            };
+        });
 
         res.json({ summary: enriched, from, to, working_days: workingDays });
     } catch (err) {
@@ -64,7 +72,7 @@ router.get('/summary', requireAuth, requireRole('admin', 'authority'), (req, res
 
 // GET /api/reports/faculty/:id?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Returns individual leave history for a faculty member
-router.get('/faculty/:id', requireAuth, (req, res) => {
+router.get('/faculty/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const { from, to } = req.query;
@@ -74,32 +82,35 @@ router.get('/faculty/:id', requireAuth, (req, res) => {
             return res.status(403).json({ error: 'You can only view your own leave history.' });
         }
 
-        const faculty = db.prepare(`
+        const facultyRes = await db.query(`
             SELECT id, full_name, department, designation
-            FROM users WHERE id = ? AND role = 'faculty'
-        `).get(id);
+            FROM users WHERE id = $1 AND role = 'faculty'
+        `, [id]);
+
+        const faculty = facultyRes.rows[0];
 
         if (!faculty) {
             return res.status(404).json({ error: 'Faculty member not found.' });
         }
 
         let query = `
-            SELECT l.id, l.leave_date, l.leave_type, l.reason, l.created_at,
+            SELECT l.id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason, l.created_at,
                    m.full_name AS marked_by_name
             FROM leaves l
             JOIN users m ON l.marked_by = m.id
-            WHERE l.faculty_id = ?
+            WHERE l.faculty_id = $1
         `;
         const params = [id];
 
         if (from && to) {
-            query += ' AND l.leave_date >= ? AND l.leave_date <= ?';
+            query += ' AND l.leave_date >= $2 AND l.leave_date <= $3';
             params.push(from, to);
         }
 
         query += ' ORDER BY l.leave_date DESC';
 
-        const leaves = db.prepare(query).all(...params);
+        const leavesRes = await db.query(query, params);
+        const leaves = leavesRes.rows;
 
         res.json({ faculty, leaves, total: leaves.length });
     } catch (err) {

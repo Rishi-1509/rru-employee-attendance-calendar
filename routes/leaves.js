@@ -1,15 +1,11 @@
 const express = require('express');
-const Database = require('better-sqlite3');
-const path = require('path');
+const db = require('../database/db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-const db = new Database(path.join(__dirname, '..', 'database', 'leave_calendar.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
 
 // GET /api/leaves?month=MM&year=YYYY — get all leaves for a month
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     try {
         const { month, year } = req.query;
 
@@ -21,19 +17,19 @@ router.get('/', requireAuth, (req, res) => {
         const startDate = `${year}-${mm}-01`;
         const endDate = `${year}-${mm}-31`;
 
-        const leaves = db.prepare(`
-            SELECT l.id, l.faculty_id, l.leave_date, l.leave_type, l.reason,
+        const result = await db.query(`
+            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
                    l.created_at, l.updated_at,
                    u.full_name AS faculty_name, u.department, u.designation,
                    m.full_name AS marked_by_name
             FROM leaves l
             JOIN users u ON l.faculty_id = u.id
             JOIN users m ON l.marked_by = m.id
-            WHERE l.leave_date >= ? AND l.leave_date <= ?
+            WHERE l.leave_date >= $1 AND l.leave_date <= $2
             ORDER BY l.leave_date ASC, u.full_name ASC
-        `).all(startDate, endDate);
+        `, [startDate, endDate]);
 
-        res.json({ leaves });
+        res.json({ leaves: result.rows });
     } catch (err) {
         console.error('Leaves fetch error:', err);
         res.status(500).json({ error: 'Failed to fetch leave records.' });
@@ -41,20 +37,21 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // GET /api/leaves/date/:date — get all absentees on a specific date
-router.get('/date/:date', requireAuth, (req, res) => {
+router.get('/date/:date', requireAuth, async (req, res) => {
     try {
         const { date } = req.params;
 
-        const leaves = db.prepare(`
-            SELECT l.id, l.faculty_id, l.leave_date, l.leave_type, l.reason,
+        const result = await db.query(`
+            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
                    l.created_at, l.updated_at,
                    u.full_name AS faculty_name, u.department, u.designation
             FROM leaves l
             JOIN users u ON l.faculty_id = u.id
-            WHERE l.leave_date = ?
+            WHERE l.leave_date = $1
             ORDER BY u.full_name ASC
-        `).all(date);
+        `, [date]);
 
+        const leaves = result.rows;
         res.json({ leaves, date, total_absent: leaves.length });
     } catch (err) {
         console.error('Date leaves error:', err);
@@ -63,7 +60,7 @@ router.get('/date/:date', requireAuth, (req, res) => {
 });
 
 // POST /api/leaves — mark faculty as absent (admin only)
-router.post('/', requireAuth, requireRole('admin'), (req, res) => {
+router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const { faculty_id, leave_date, leave_type, reason } = req.body;
 
@@ -72,25 +69,25 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
         }
 
         // Validate faculty exists
-        const faculty = db.prepare('SELECT id FROM users WHERE id = ? AND role = ?').get(faculty_id, 'faculty');
-        if (!faculty) {
+        const facultyRes = await db.query('SELECT id FROM users WHERE id = $1 AND role = $2', [faculty_id, 'faculty']);
+        if (facultyRes.rows.length === 0) {
             return res.status(404).json({ error: 'Faculty member not found.' });
         }
 
         // Check for duplicate
-        const existing = db.prepare('SELECT id FROM leaves WHERE faculty_id = ? AND leave_date = ?').get(faculty_id, leave_date);
-        if (existing) {
+        const existingRes = await db.query('SELECT id FROM leaves WHERE faculty_id = $1 AND leave_date = $2', [faculty_id, leave_date]);
+        if (existingRes.rows.length > 0) {
             return res.status(409).json({ error: 'Leave already recorded for this faculty on this date.' });
         }
 
-        const result = db.prepare(`
+        const insertRes = await db.query(`
             INSERT INTO leaves (faculty_id, leave_date, leave_type, reason, marked_by)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(faculty_id, leave_date, leave_type, reason || '', req.session.user.id);
+            VALUES ($1, $2, $3, $4, $5) RETURNING id
+        `, [faculty_id, leave_date, leave_type, reason || '', req.session.user.id]);
 
         res.status(201).json({
             message: 'Leave recorded successfully.',
-            leave_id: result.lastInsertRowid
+            leave_id: insertRes.rows[0].id
         });
     } catch (err) {
         console.error('Leave create error:', err);
@@ -99,7 +96,7 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // POST /api/leaves/bulk — mark multiple faculty as absent on a date (admin only)
-router.post('/bulk', requireAuth, requireRole('admin'), (req, res) => {
+router.post('/bulk', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const { faculty_ids, leave_date, leave_type, reason } = req.body;
 
@@ -107,25 +104,24 @@ router.post('/bulk', requireAuth, requireRole('admin'), (req, res) => {
             return res.status(400).json({ error: 'faculty_ids (array), leave_date, and leave_type are required.' });
         }
 
-        const insertStmt = db.prepare(`
-            INSERT OR IGNORE INTO leaves (faculty_id, leave_date, leave_type, reason, marked_by)
-            VALUES (?, ?, ?, ?, ?)
-        `);
+        const insertQuery = `
+            INSERT INTO leaves (faculty_id, leave_date, leave_type, reason, marked_by)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (faculty_id, leave_date) DO NOTHING RETURNING id
+        `;
 
-        const insertMany = db.transaction((ids) => {
-            let inserted = 0;
-            for (const fid of ids) {
-                const result = insertStmt.run(fid, leave_date, leave_type, reason || '', req.session.user.id);
-                if (result.changes > 0) inserted++;
+        let insertedCount = 0;
+        
+        for (const fid of faculty_ids) {
+            const insertRes = await db.query(insertQuery, [fid, leave_date, leave_type, reason || '', req.session.user.id]);
+            if (insertRes.rowCount > 0) {
+                insertedCount++;
             }
-            return inserted;
-        });
-
-        const count = insertMany(faculty_ids);
+        }
 
         res.status(201).json({
-            message: `${count} leave record(s) created successfully.`,
-            inserted: count
+            message: `${insertedCount} leave record(s) created successfully.`,
+            inserted: insertedCount
         });
     } catch (err) {
         console.error('Bulk leave error:', err);
@@ -134,23 +130,23 @@ router.post('/bulk', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // PUT /api/leaves/:id — update a leave record (admin only)
-router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const { leave_type, reason } = req.body;
         const { id } = req.params;
 
-        const existing = db.prepare('SELECT * FROM leaves WHERE id = ?').get(id);
-        if (!existing) {
+        const existingRes = await db.query('SELECT * FROM leaves WHERE id = $1', [id]);
+        if (existingRes.rows.length === 0) {
             return res.status(404).json({ error: 'Leave record not found.' });
         }
 
-        db.prepare(`
+        await db.query(`
             UPDATE leaves
-            SET leave_type = COALESCE(?, leave_type),
-                reason = COALESCE(?, reason),
+            SET leave_type = COALESCE($1, leave_type),
+                reason = COALESCE($2, reason),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `).run(leave_type || null, reason !== undefined ? reason : null, id);
+            WHERE id = $3
+        `, [leave_type || null, reason !== undefined ? reason : null, id]);
 
         res.json({ message: 'Leave record updated successfully.' });
     } catch (err) {
@@ -160,16 +156,16 @@ router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // DELETE /api/leaves/:id — remove a leave record (admin only)
-router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
 
-        const existing = db.prepare('SELECT * FROM leaves WHERE id = ?').get(id);
-        if (!existing) {
+        const existingRes = await db.query('SELECT * FROM leaves WHERE id = $1', [id]);
+        if (existingRes.rows.length === 0) {
             return res.status(404).json({ error: 'Leave record not found.' });
         }
 
-        db.prepare('DELETE FROM leaves WHERE id = ?').run(id);
+        await db.query('DELETE FROM leaves WHERE id = $1', [id]);
 
         res.json({ message: 'Leave record deleted successfully.' });
     } catch (err) {
@@ -179,16 +175,16 @@ router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // DELETE /api/leaves/date/:date/faculty/:facultyId — remove leave by date & faculty (admin only)
-router.delete('/date/:date/faculty/:facultyId', requireAuth, requireRole('admin'), (req, res) => {
+router.delete('/date/:date/faculty/:facultyId', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const { date, facultyId } = req.params;
 
-        const existing = db.prepare('SELECT * FROM leaves WHERE leave_date = ? AND faculty_id = ?').get(date, facultyId);
-        if (!existing) {
+        const existingRes = await db.query('SELECT * FROM leaves WHERE leave_date = $1 AND faculty_id = $2', [date, facultyId]);
+        if (existingRes.rows.length === 0) {
             return res.status(404).json({ error: 'Leave record not found.' });
         }
 
-        db.prepare('DELETE FROM leaves WHERE leave_date = ? AND faculty_id = ?').run(date, facultyId);
+        await db.query('DELETE FROM leaves WHERE leave_date = $1 AND faculty_id = $2', [date, facultyId]);
 
         res.json({ message: 'Leave record removed successfully.' });
     } catch (err) {
