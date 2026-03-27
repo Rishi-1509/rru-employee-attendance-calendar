@@ -1,5 +1,5 @@
 const express = require('express');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 const cors = require('cors');
 const path = require('path');
 
@@ -16,16 +16,24 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(session({
-    secret: 'faculty-leave-calendar-secret-key-2026',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        httpOnly: true,
-        secure: false // set true in production with HTTPS
-    }
+app.use(cookieSession({
+    name: 'session',
+    keys: ['faculty-leave-calendar-secret-key-2026'],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'
 }));
+
+// Compatibility adapter for req.session.destroy used in logout
+app.use((req, res, next) => {
+    if (req.session && !req.session.destroy) {
+        req.session.destroy = (cb) => {
+            req.session = null;
+            if (cb) cb();
+        };
+    }
+    next();
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
