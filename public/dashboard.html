@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Faculty Leave Calendar Dashboard — View and manage faculty attendance">
+    <title>Dashboard — Faculty Leave Calendar</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <nav class="top-nav" id="top-nav">
+            <div class="nav-brand">
+                <div class="nav-brand-icon">🗓️</div>
+                <h1>Leave Calendar</h1>
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link active" id="nav-calendar">📅 Calendar</a>
+                <a href="/reports" class="nav-link" id="nav-reports">📊 Reports</a>
+            </div>
+            <div class="nav-user">
+                <div class="nav-user-info">
+                    <div class="nav-user-name" id="user-display-name">—</div>
+                    <div class="nav-user-role" id="user-display-role">—</div>
+                </div>
+                <div class="user-avatar" id="user-avatar">—</div>
+                <button class="btn btn-sm btn-secondary" id="logout-btn" title="Sign Out">🚪 Logout</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon blue">👥</div>
+                    <div>
+                        <div class="stat-value" id="stat-total-faculty">—</div>
+                        <div class="stat-label">Total Faculty</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">✅</div>
+                    <div>
+                        <div class="stat-value" id="stat-present-today">—</div>
+                        <div class="stat-label">Present Today</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber">🏖️</div>
+                    <div>
+                        <div class="stat-value" id="stat-absent-today">—</div>
+                        <div class="stat-label">Absent Today</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">📋</div>
+                    <div>
+                        <div class="stat-value" id="stat-leaves-month">—</div>
+                        <div class="stat-label">Leaves This Month</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Header -->
+            <div class="calendar-header">
+                <div class="calendar-nav">
+                    <button class="calendar-nav-btn" id="prev-month-btn" title="Previous Month">◀</button>
+                    <div class="calendar-month-title" id="calendar-month-title">—</div>
+                    <button class="calendar-nav-btn" id="next-month-btn" title="Next Month">▶</button>
+                </div>
+                <div class="calendar-actions">
+                    <button class="btn btn-sm btn-secondary" id="today-btn">Today</button>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot casual"></div>Casual</div>
+                        <div class="legend-item"><div class="legend-dot medical"></div>Medical</div>
+                        <div class="legend-item"><div class="legend-dot earned"></div>Earned</div>
+                        <div class="legend-item"><div class="legend-dot duty"></div>Duty</div>
+                        <div class="legend-item"><div class="legend-dot other"></div>Other</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-grid" id="calendar-grid">
+                <div class="calendar-weekdays">
+                    <div class="weekday">Sun</div>
+                    <div class="weekday">Mon</div>
+                    <div class="weekday">Tue</div>
+                    <div class="weekday">Wed</div>
+                    <div class="weekday">Thu</div>
+                    <div class="weekday">Fri</div>
+                    <div class="weekday">Sat</div>
+                </div>
+                <div class="calendar-days" id="calendar-days">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Mark Leave (Admin) -->
+    <div class="modal-overlay" id="mark-leave-modal">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Mark Leave</h3>
+                <button class="modal-close" id="modal-close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="date-detail-header" id="modal-date-header">
+                    <div class="date-detail-date" id="modal-date-display">—</div>
+                    <div class="date-detail-stats">
+                        <div class="date-detail-stat">Absent: <strong id="modal-absent-count">0</strong></div>
+                        <div class="date-detail-stat">Present: <strong id="modal-present-count">0</strong></div>
+                    </div>
+                </div>
+
+                <!-- Existing leaves for this date -->
+                <div id="modal-existing-leaves" style="margin-bottom: 20px;">
+                    <h4 style="font-size:0.875rem; margin-bottom:8px; color:var(--gray-300);">Currently Absent</h4>
+                    <div class="absent-list" id="modal-absent-list">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Add new leave section (admin only) -->
+                <div id="modal-add-section" style="display:none;">
+                    <h4 style="font-size:0.875rem; margin-bottom:12px; color:var(--gray-300);">Add Absent Faculty</h4>
+                    <div class="form-group">
+                        <label class="form-label">Leave Type</label>
+                        <select class="form-select" id="modal-leave-type">
+                            <option value="casual">Casual Leave</option>
+                            <option value="medical">Medical Leave</option>
+                            <option value="earned">Earned Leave</option>
+                            <option value="duty">Duty Leave</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reason (Optional)</label>
+                        <input type="text" class="form-input" id="modal-reason" placeholder="Enter reason for leave">
+                    </div>
+                    <div class="faculty-search">
+                        <input type="text" class="form-input" id="faculty-search-input" placeholder="🔍 Search faculty by name or department...">
+                    </div>
+                    <div class="faculty-list" id="faculty-checklist">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel-btn">Close</button>
+                <button class="btn btn-primary" id="modal-save-btn" style="display:none;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/calendar.js"></script>
+</body>
+</html>

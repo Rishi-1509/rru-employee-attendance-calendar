@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: faculty-leave-calendar
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free # Can upgrade later
+    # If upgrading to a paid plan, uncomment the following to persist SQLite data:
+    # disk:
+    #   name: sqlite-data
+    #   mountPath: /opt/render/project/src/database
+    #   sizeGB: 1

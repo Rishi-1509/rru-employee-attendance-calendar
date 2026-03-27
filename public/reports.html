@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Faculty Attendance Reports — Analyze leave patterns and attendance data">
+    <title>Reports — Faculty Leave Calendar</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <nav class="top-nav" id="top-nav">
+            <div class="nav-brand">
+                <div class="nav-brand-icon">🗓️</div>
+                <h1>Leave Calendar</h1>
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link" id="nav-calendar">📅 Calendar</a>
+                <a href="/reports" class="nav-link active" id="nav-reports">📊 Reports</a>
+            </div>
+            <div class="nav-user">
+                <div class="nav-user-info">
+                    <div class="nav-user-name" id="user-display-name">—</div>
+                    <div class="nav-user-role" id="user-display-role">—</div>
+                </div>
+                <div class="user-avatar" id="user-avatar">—</div>
+                <button class="btn btn-sm btn-secondary" id="logout-btn" title="Sign Out">🚪 Logout</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <h2 style="margin-bottom: 24px; background: linear-gradient(135deg, #fff, var(--gray-300)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                📊 Attendance Reports
+            </h2>
+
+            <!-- Report Controls -->
+            <div class="report-controls glass-panel">
+                <div class="form-group">
+                    <label class="form-label">From Date</label>
+                    <input type="date" class="form-input" id="report-from">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">To Date</label>
+                    <input type="date" class="form-input" id="report-to">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-primary" id="generate-report-btn">📊 Generate Report</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-secondary" id="export-csv-btn">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="stats-bar" id="report-stats" style="display:none;">
+                <div class="stat-card">
+                    <div class="stat-icon blue">📆</div>
+                    <div>
+                        <div class="stat-value" id="rstat-working-days">—</div>
+                        <div class="stat-label">Working Days</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber">📋</div>
+                    <div>
+                        <div class="stat-value" id="rstat-total-leaves">—</div>
+                        <div class="stat-label">Total Leave Records</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">📈</div>
+                    <div>
+                        <div class="stat-value" id="rstat-avg-attendance">—</div>
+                        <div class="stat-label">Avg Attendance %</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Table -->
+            <div class="report-table-container" id="report-table-container" style="display:none;">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Faculty Name</th>
+                            <th>Department</th>
+                            <th>Casual</th>
+                            <th>Medical</th>
+                            <th>Earned</th>
+                            <th>Duty</th>
+                            <th>Other</th>
+                            <th>Total Leaves</th>
+                            <th>Attendance %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Individual Faculty Detail (expandable) -->
+            <div id="faculty-detail-panel" style="display: none; margin-top: 24px;">
+                <div class="glass-panel" style="padding: 24px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                        <h3 id="detail-faculty-name" style="font-size:1.125rem;">—</h3>
+                        <button class="btn btn-sm btn-secondary" id="close-detail-btn">✕ Close</button>
+                    </div>
+                    <div class="report-table-container">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Leave Type</th>
+                                    <th>Reason</th>
+                                    <th>Marked By</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detail-table-body">
+                                <!-- Rendered by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div class="empty-state" id="report-empty">
+                <div class="empty-state-icon">📊</div>
+                <p class="empty-state-text">Select a date range and click "Generate Report" to view attendance data</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/reports.js"></script>
+</body>
+</html>
