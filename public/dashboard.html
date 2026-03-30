@@ -26,7 +26,10 @@
                     <div class="nav-user-role" id="user-display-role">—</div>
                 </div>
                 <div class="user-avatar" id="user-avatar">—</div>
-                <button class="btn btn-sm btn-secondary" id="logout-btn" title="Sign Out">🚪 Logout</button>
+                <div class="nav-actions">
+                    <button class="btn btn-sm btn-primary" id="change-password-btn" style="box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);">🔒 Change Password</button>
+                    <button class="btn btn-sm btn-secondary" id="logout-btn" title="Sign Out">🚪 Logout</button>
+                </div>
             </div>
         </nav>
 
@@ -153,6 +156,37 @@
             <div class="modal-footer" id="modal-footer">
                 <button class="btn btn-secondary" id="modal-cancel-btn">Close</button>
                 <button class="btn btn-primary" id="modal-save-btn" style="display:none;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Change Password -->
+    <div class="modal-overlay" id="change-password-modal">
+        <div class="modal glass-panel" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Change Password</h3>
+                <button class="modal-close" id="cp-modal-close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.875rem; color: var(--gray-400); margin-bottom: 20px;">
+                    Update your password to keep your account secure.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" class="form-input" id="cp-old-password" placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-input" id="cp-new-password" placeholder="Minimum 6 characters">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-input" id="cp-confirm-password" placeholder="Confirm new password">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cp-modal-cancel-btn">Cancel</button>
+                <button class="btn btn-primary" id="cp-modal-save-btn">Update Password</button>
             </div>
         </div>
     </div>

@@ -179,10 +179,11 @@
                 badge.className = `leave-badge ${leave.leave_type}`;
 
                 // Short name
-                const nameParts = leave.faculty_name.split(' ');
+                const facultyName = leave.faculty_name || 'Staff';
+                const nameParts = facultyName.split(' ');
                 const shortName = nameParts.length > 1
                     ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`
-                    : leave.faculty_name;
+                    : facultyName;
 
                 badge.textContent = shortName;
                 badge.title = `${leave.faculty_name} — ${leave.leave_type} leave${leave.reason ? ': ' + leave.reason : ''}`;
@@ -211,7 +212,11 @@
     async function fetchLeaves() {
         try {
             const mm = currentMonth + 1;
-            const res = await fetch(`/api/leaves?month=${mm}&year=${currentYear}`, { credentials: 'include' });
+            const t = new Date().getTime(); // Cache buster
+            const res = await fetch(`/api/leaves?month=${mm}&year=${currentYear}&t=${t}`, { 
+                credentials: 'include',
+                cache: 'no-store'
+            });
             if (res.ok) {
                 const data = await res.json();
                 leavesData = data.leaves;
@@ -379,7 +384,7 @@
             if (res.ok) {
                 window.showToast(`${data.inserted} leave record(s) saved successfully!`, 'success');
                 closeModal();
-                renderCalendar(); // Refresh
+                await renderCalendar(); // Refresh
             } else {
                 window.showToast(data.error || 'Failed to save leaves.', 'error');
             }
@@ -403,7 +408,7 @@
             if (res.ok) {
                 window.showToast('Leave record removed.', 'success');
                 closeModal();
-                renderCalendar();
+                await renderCalendar();
             } else {
                 const data = await res.json();
                 window.showToast(data.error || 'Failed to remove leave.', 'error');

@@ -15,20 +15,30 @@ router.get('/', requireAuth, async (req, res) => {
 
         const mm = String(month).padStart(2, '0');
         const startDate = `${year}-${mm}-01`;
-        const endDate = `${year}-${mm}-31`;
+        
+        // Calculate the first day of the NEXT month to use as a non-inclusive upper bound
+        let nextYear = parseInt(year);
+        let nextMonth = parseInt(month) + 1;
+        if (nextMonth > 12) {
+            nextMonth = 1;
+            nextYear++;
+        }
+        const nextMonthStr = String(nextMonth).padStart(2, '0');
+        const endDateBound = `${nextYear}-${nextMonthStr}-01`;
 
         const result = await db.query(`
-            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
+            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date::DATE, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
                    l.created_at, l.updated_at,
-                   u.full_name AS faculty_name, u.department, u.designation,
-                   m.full_name AS marked_by_name
+                   COALESCE(u.full_name, 'Unknown Faculty') AS faculty_name, u.department, u.designation,
+                   COALESCE(m.full_name, 'Unknown Admin') AS marked_by_name
             FROM leaves l
             JOIN users u ON l.faculty_id = u.id
-            JOIN users m ON l.marked_by = m.id
-            WHERE l.leave_date >= $1 AND l.leave_date <= $2
+            LEFT JOIN users m ON l.marked_by = m.id
+            WHERE l.leave_date::DATE >= $1::DATE AND l.leave_date::DATE < $2::DATE
             ORDER BY l.leave_date ASC, u.full_name ASC
-        `, [startDate, endDate]);
+        `, [startDate, endDateBound]);
 
+        console.log(`[API/leaves/GET] Fetched ${result.rows.length} records for period ${startDate} to ${endDateBound}`);
         res.json({ leaves: result.rows });
     } catch (err) {
         console.error('Leaves fetch error:', err);
@@ -42,12 +52,12 @@ router.get('/date/:date', requireAuth, async (req, res) => {
         const { date } = req.params;
 
         const result = await db.query(`
-            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
+            SELECT l.id, l.faculty_id, TO_CHAR(l.leave_date::DATE, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason,
                    l.created_at, l.updated_at,
-                   u.full_name AS faculty_name, u.department, u.designation
+                   COALESCE(u.full_name, 'Unknown Faculty') AS faculty_name, u.department, u.designation
             FROM leaves l
             JOIN users u ON l.faculty_id = u.id
-            WHERE l.leave_date = $1
+            WHERE l.leave_date::DATE = $1::DATE
             ORDER BY u.full_name ASC
         `, [date]);
 
@@ -82,7 +92,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 
         const insertRes = await db.query(`
             INSERT INTO leaves (faculty_id, leave_date, leave_type, reason, marked_by)
-            VALUES ($1, $2, $3, $4, $5) RETURNING id
+            VALUES ($1, TO_DATE($2, 'YYYY-MM-DD'), $3, $4, $5) RETURNING id
         `, [faculty_id, leave_date, leave_type, reason || '', req.session.user.id]);
 
         res.status(201).json({
@@ -106,9 +116,11 @@ router.post('/bulk', requireAuth, requireRole('admin'), async (req, res) => {
 
         const insertQuery = `
             INSERT INTO leaves (faculty_id, leave_date, leave_type, reason, marked_by)
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES ($1, TO_DATE($2, 'YYYY-MM-DD'), $3, $4, $5)
             ON CONFLICT (faculty_id, leave_date) DO NOTHING RETURNING id
         `;
+
+        console.log(`[API/leaves/bulk] Saving leaves for date: "${leave_date}" (type: ${typeof leave_date}), type: ${leave_type}`);
 
         let insertedCount = 0;
         

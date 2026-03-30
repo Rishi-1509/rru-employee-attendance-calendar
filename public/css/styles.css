@@ -376,6 +376,12 @@ a:hover { color: var(--primary-300); }
     gap: 12px;
 }
 
+.nav-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .nav-user-info {
     text-align: right;
 }
@@ -1087,9 +1093,17 @@ a:hover { color: var(--primary-300); }
 
 @media (max-width: 480px) {
     .nav-links { display: none; }
-    .calendar-day { min-height: 55px; padding: 4px; }
-    .leave-badge { display: none; }
-    .day-leaves .leave-dots { display: flex; gap: 2px; flex-wrap: wrap; }
+    .calendar-day { min-height: 85px; padding: 4px; }
+    .leave-badge { 
+        display: flex;
+        font-size: 0.55rem; 
+        padding: 1px 3px;
+        margin-bottom: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .day-leaves .leave-dots { display: none; }
     .leave-dot-indicator {
         width: 6px; height: 6px; border-radius: 50%;
     }

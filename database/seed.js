@@ -20,39 +20,46 @@ async function seed() {
         // Insert admin user
         const insertUserQuery = `
             INSERT INTO users (username, password_hash, full_name, role, department, designation, email)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (username) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                role = EXCLUDED.role,
+                department = EXCLUDED.department,
+                designation = EXCLUDED.designation,
+                email = EXCLUDED.email
+            RETURNING id
         `;
 
         await pool.query(insertUserQuery, ['admin', hash, 'System Administrator', 'admin', 'Administration', 'Admin', 'admin@university.edu']);
         console.log('Admin user created: admin / password123');
 
-        // Insert authority users
-        await pool.query(insertUserQuery, ['hod_cs', hash, 'Dr. Rajesh Kumar', 'authority', 'Computer Science', 'Head of Department', 'rajesh.kumar@university.edu']);
-        await pool.query(insertUserQuery, ['hr_manager', hash, 'Mrs. Priya Sharma', 'authority', 'Human Resources', 'HR Manager', 'priya.sharma@university.edu']);
-        console.log('Authority users created: hod_cs, hr_manager / password123');
+        // Insert authority users 
+        await pool.query(insertUserQuery, ['py_director', hash, 'G Arsh', 'authority', 'Criminology', 'Director', '']);
+        await pool.query(insertUserQuery, ['py_ad', hash, 'Subash.I Nethaji', 'authority', 'Criminology', 'Assitant Director', '']);
+        console.log('Authority users created: py_director, py_ad / password123');
 
         // Insert 20 faculty members
         const facultyMembers = [
-            { username: 'faculty1', name: 'Dr. Ananya Patel', dept: 'Computer Science', designation: 'Associate Professor' },
-            { username: 'faculty2', name: 'Prof. Vikram Singh', dept: 'Computer Science', designation: 'Professor' },
-            { username: 'faculty3', name: 'Dr. Meera Nair', dept: 'Computer Science', designation: 'Assistant Professor' },
-            { username: 'faculty4', name: 'Dr. Suresh Menon', dept: 'Computer Science', designation: 'Associate Professor' },
-            { username: 'faculty5', name: 'Prof. Lakshmi Iyer', dept: 'Mathematics', designation: 'Professor' },
-            { username: 'faculty6', name: 'Dr. Arjun Reddy', dept: 'Mathematics', designation: 'Assistant Professor' },
-            { username: 'faculty7', name: 'Dr. Kavitha Rao', dept: 'Mathematics', designation: 'Associate Professor' },
-            { username: 'faculty8', name: 'Prof. Deepak Joshi', dept: 'Physics', designation: 'Professor' },
-            { username: 'faculty9', name: 'Dr. Sneha Gupta', dept: 'Physics', designation: 'Assistant Professor' },
-            { username: 'faculty10', name: 'Dr. Ramesh Verma', dept: 'Physics', designation: 'Associate Professor' },
-            { username: 'faculty11', name: 'Prof. Sunita Das', dept: 'Chemistry', designation: 'Professor' },
-            { username: 'faculty12', name: 'Dr. Anil Kapoor', dept: 'Chemistry', designation: 'Assistant Professor' },
-            { username: 'faculty13', name: 'Dr. Pooja Sharma', dept: 'Chemistry', designation: 'Associate Professor' },
-            { username: 'faculty14', name: 'Prof. Manoj Tiwari', dept: 'English', designation: 'Professor' },
-            { username: 'faculty15', name: 'Dr. Nisha Agarwal', dept: 'English', designation: 'Assistant Professor' },
-            { username: 'faculty16', name: 'Dr. Sanjay Mishra', dept: 'English', designation: 'Associate Professor' },
-            { username: 'faculty17', name: 'Prof. Rekha Bhat', dept: 'Economics', designation: 'Professor' },
-            { username: 'faculty18', name: 'Dr. Amit Saxena', dept: 'Economics', designation: 'Assistant Professor' },
-            { username: 'faculty19', name: 'Dr. Divya Krishnan', dept: 'Economics', designation: 'Associate Professor' },
-            { username: 'faculty20', name: 'Prof. Ganesh Pillai', dept: 'History', designation: 'Professor' },
+            { username: 'faculty1', name: 'Chakravarthi Midhun', dept: 'Criminology', designation: 'Research officer' },
+            { username: 'faculty2', name: 'P.Suriya', dept: 'Cybersecurity', designation: 'TCRO-IT' },
+            { username: 'faculty3', name: 'DR S.Abarna', dept: 'Cybersecurity', designation: 'Assistant Professor' },
+            { username: 'faculty4', name: 'Shankar Sharuhasa', dept: 'Corporate Security', designation: 'Assistant Professor' },
+            { username: 'faculty5', name: 'Sarathkumar', dept: 'non tecaching faculty', designation: 'Professor' },
+            { username: 'faculty6', name: 'Subash.I Nethaji', dept: 'Criminology', designation: 'Assistant Professor' },
+            { username: 'faculty7', name: 'G Arsh', dept: 'Criminology', designation: 'Associate Professor' },
+            { username: 'faculty8', name: 'Emima Royal', dept: 'Library& IA', designation: 'Librarian' },
+            { username: 'faculty9', name: 'Ram Kumar', dept: 'non teaching faculty', designation: 'Junior Engineer' },
+            { username: 'faculty10', name: 'Mahendran', dept: 'Administration', designation: 'Admin' },
+            { username: 'faculty11', name: 'N.Rajesh', dept: 'Administration', designation: 'Admin' },
+            { username: 'faculty12', name: 'Nidhya', dept: 'Sports', designation: 'STO' },
+            { username: 'faculty13', name: 'Srinivasan', dept: 'non teaching faculty', designation: 'Electrician&plumber' },
+            { username: 'faculty14', name: 'ttttttt', dept: 'English', designation: 'Professor' },
+            { username: 'faculty15', name: 'ttttttt', dept: 'English', designation: 'Assistant Professor' },
+            { username: 'faculty16', name: 'ttttttt', dept: 'English', designation: 'Associate Professor' },
+            { username: 'faculty17', name: 'ttttttt', dept: 'Economics', designation: 'Professor' },
+            { username: 'faculty18', name: 'ttttttt', dept: 'Economics', designation: 'Assistant Professor' },
+            { username: 'faculty19', name: 'ttttttt', dept: 'Economics', designation: 'Associate Professor' },
+            { username: 'faculty20', name: 'ttttttt', dept: 'History', designation: 'Professor' },
         ];
 
         for (const m of facultyMembers) {
@@ -69,10 +76,10 @@ async function seed() {
         const today = new Date();
         const year = today.getFullYear();
         const month = today.getMonth(); // 0-indexed
-        
+
         // Use ID 1 for admin 'marked_by' (assuming serial sequences generated sequential IDs)
         // Adjusting IDs slightly for demo (faculties started from ID 4 in original script)
-        
+
         const leavesData = [
             [4, `${year}-${String(month + 1).padStart(2, '0')}-05`, 'casual', 'Personal work', 1],
             [7, `${year}-${String(month + 1).padStart(2, '0')}-05`, 'medical', 'Doctor appointment', 1],
@@ -93,7 +100,7 @@ async function seed() {
         }
 
         console.log('Sample leave records created for current month.');
-        
+
         console.log('\nDatabase seeded successfully!');
     } catch (err) {
         console.error('Seeding error:', err);

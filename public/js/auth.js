@@ -140,6 +140,85 @@
         }, 3500);
     };
 
+    // ─── Change Password Handler ───
+    const cpModal = document.getElementById('change-password-modal');
+    const cpBtn = document.getElementById('change-password-btn');
+    const cpCloseBtn = document.getElementById('cp-modal-close-btn');
+    const cpCancelBtn = document.getElementById('cp-modal-cancel-btn');
+    const cpSaveBtn = document.getElementById('cp-modal-save-btn');
+
+    if (cpBtn) {
+        cpBtn.addEventListener('click', () => {
+            cpModal.classList.add('active');
+        });
+    }
+
+    const closeCPModal = () => {
+        cpModal.classList.remove('active');
+        // Clear inputs
+        document.getElementById('cp-old-password').value = '';
+        document.getElementById('cp-new-password').value = '';
+        document.getElementById('cp-confirm-password').value = '';
+    };
+
+    if (cpCloseBtn) cpCloseBtn.addEventListener('click', closeCPModal);
+    if (cpCancelBtn) cpCancelBtn.addEventListener('click', closeCPModal);
+    if (cpModal) {
+        cpModal.addEventListener('click', (e) => {
+            if (e.target.id === 'change-password-modal') closeCPModal();
+        });
+    }
+
+    if (cpSaveBtn) {
+        cpSaveBtn.addEventListener('click', async () => {
+            const oldPassword = document.getElementById('cp-old-password').value;
+            const newPassword = document.getElementById('cp-new-password').value;
+            const confirmPassword = document.getElementById('cp-confirm-password').value;
+
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                window.showToast('Please fill in all password fields.', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                window.showToast('New passwords do not match.', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                window.showToast('New password must be at least 6 characters.', 'error');
+                return;
+            }
+
+            cpSaveBtn.disabled = true;
+            cpSaveBtn.innerHTML = '<span class="spinner"></span> Updating...';
+
+            try {
+                const res = await fetch(`${API_BASE}/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    window.showToast('Password updated! Please use your new password next time.', 'success');
+                    closeCPModal();
+                } else {
+                    window.showToast(data.error || 'Failed to update password.', 'error');
+                }
+            } catch (err) {
+                console.error('Change password error:', err);
+                window.showToast('Network error. Please try again.', 'error');
+            } finally {
+                cpSaveBtn.disabled = false;
+                cpSaveBtn.textContent = 'Update Password';
+            }
+        });
+    }
+
     // ─── Initialize ───
     checkSession();
 

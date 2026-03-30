@@ -47,12 +47,58 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Logout failed.' });
+    if (req.session) {
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Logout failed.' });
+            }
+            res.json({ message: 'Logged out successfully.' });
+        });
+    } else {
+        res.json({ message: 'No active session.' });
+    }
+});
+
+// POST /api/auth/change-password
+router.post('/change-password', async (req, res) => {
+    try {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ error: 'Not authenticated.' });
         }
-        res.json({ message: 'Logged out successfully.' });
-    });
+
+        const { oldPassword, newPassword } = req.body;
+        const userId = req.session.user.id;
+
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ error: 'Old and new passwords are required.' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+        }
+
+        // Get user from DB to check current password
+        const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [userId]);
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const valid = bcrypt.compareSync(oldPassword, user.password_hash);
+        if (!valid) {
+            return res.status(401).json({ error: 'Incorrect current password.' });
+        }
+
+        // Hash new password and update
+        const hash = bcrypt.hashSync(newPassword, 10);
+        await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
+
+        res.json({ message: 'Password updated successfully.' });
+    } catch (err) {
+        console.error('Change password error:', err);
+        res.status(500).json({ error: 'Failed to update password.' });
+    }
 });
 
 // GET /api/auth/me
