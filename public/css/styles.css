@@ -613,8 +613,9 @@ a:hover { color: var(--primary-300); }
 
 .calendar-actions {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 /* ─── Stats Bar ─── */
@@ -1110,17 +1111,19 @@ a:hover { color: var(--primary-300); }
 /* ─── Legend ─── */
 .legend {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
-    padding: 12px 0;
+    align-items: center;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
     color: var(--gray-400);
+    white-space: nowrap;
 }
 
 .legend-dot {
