@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Faculty Leave Calendar Dashboard — View and manage faculty attendance">
     <title>Dashboard — Faculty Leave Calendar</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=1.0.1">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
 </head>
 <body>
@@ -104,12 +104,12 @@
                     </div>
                 </div>
 
-                <!-- Right: My Attendance Profile (Faculty Only) -->
-                <div id="faculty-profile-sidebar" class="profile-sidebar" style="display:none;">
-                    <div class="glass-panel profile-card">
+                <!-- Right Column: My Attendance Profile (Side-by-side with calendar) -->
+                <div id="user-attendance-profile" class="profile-sidebar" style="display:none; opacity:0; transition: opacity 0.5s ease-in;">
+                    <div class="glass-panel profile-card" style="box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
                         <div class="profile-header">
                             <div class="profile-avatar-large" id="profile-avatar-large">👤</div>
-                            <h3 id="profile-name-large">Faculty Name</h3>
+                            <h3 id="profile-name-large">Profile Name</h3>
                             <p id="profile-dept-large" class="text-secondary">Department</p>
                         </div>
                         
@@ -238,7 +238,7 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <script src="/js/auth.js"></script>
-    <script src="/js/calendar.js"></script>
+    <script src="/js/auth.js?v=1.0.1"></script>
+    <script src="/js/calendar.js?v=1.0.1"></script>
 </body>
 </html>

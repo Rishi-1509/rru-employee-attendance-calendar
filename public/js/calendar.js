@@ -30,9 +30,10 @@
                 if (window.currentUser.role === 'admin' || window.currentUser.role === 'authority') {
                     const adminBar = document.getElementById('admin-stats-bar');
                     if (adminBar) adminBar.style.display = 'grid';
-                } else if (window.currentUser.role === 'faculty') {
-                    loadPersonalStats();
                 }
+                
+                // Show the Attendance Profile for everyone
+                loadPersonalStats();
                 renderCalendar();
             }
         }, 100);
@@ -94,17 +95,19 @@
             if (res.ok) {
                 const data = await res.json();
                 
-                const section = document.getElementById('faculty-profile-sidebar');
-                if (section) section.style.display = 'block';
+                const section = document.getElementById('user-attendance-profile');
+                if (section) {
+                    section.style.display = 'block';
+                    setTimeout(() => section.style.opacity = '1', 50); // Fade in
+                }
                 
-                // Set profile details
                 const initials = window.currentUser.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
                 if (document.getElementById('profile-avatar-large')) 
                     document.getElementById('profile-avatar-large').textContent = initials;
                 if (document.getElementById('profile-name-large'))
                     document.getElementById('profile-name-large').textContent = window.currentUser.full_name;
                 if (document.getElementById('profile-dept-large'))
-                    document.getElementById('profile-dept-large').textContent = window.currentUser.department + ' • ' + window.currentUser.designation;
+                    document.getElementById('profile-dept-large').textContent = (window.currentUser.department || '') + ' • ' + (window.currentUser.designation || '');
 
                 if (document.getElementById('stat-total-taken')) 
                     document.getElementById('stat-total-taken').textContent = data.total_taken_this_year;
