@@ -127,6 +127,7 @@
                 <td>${s.duty_leaves || 0}</td>
                 <td>${s.other_leaves || 0}</td>
                 <td style="font-weight:700;">${s.leaves_in_period}</td>
+                <td style="color:var(--amber-400); font-weight:700;">${s.total_taken_this_year}</td>
                 <td style="color:var(--blue-400); font-weight:600;">${s.annual_total}</td>
                 <td style="color:${s.remaining_leaves < 5 ? 'var(--error)' : 'var(--success)'}; font-weight:700;">${s.remaining_leaves}</td>
                 <td>
@@ -197,12 +198,12 @@
 
         const { summary, from, to, working_days } = reportData;
 
-        csv += '#,Faculty Name,Department,Designation,Casual,Medical,Earned,Duty,Other,Taken (Period),Annual Total,Remaining,Present Days,Attendance %\n';
+        let csv = '#,Faculty Name,Department,Designation,Casual,Medical,Earned,Duty,Other,Taken (Period),Taken (Year),Annual Allotted,Remaining,Present Days,Attendance %\n';
 
         summary.forEach((s, idx) => {
             csv += `${idx + 1},"${s.full_name}","${s.department}","${s.designation}",`;
             csv += `${s.casual_leaves},${s.medical_leaves},${s.earned_leaves},${s.duty_leaves},${s.other_leaves},`;
-            csv += `${s.leaves_in_period},${s.annual_total},${s.remaining_leaves},${s.present_days},${s.attendance_percentage}\n`;
+            csv += `${s.leaves_in_period},${s.total_taken_this_year},${s.annual_total},${s.remaining_leaves},${s.present_days},${s.attendance_percentage}\n`;
         });
 
         // Download

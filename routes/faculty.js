@@ -65,7 +65,7 @@ router.get('/me/summary', requireAuth, async (req, res) => {
         const leavesResult = await db.query(`
             SELECT COUNT(*) as taken_count 
             FROM leaves 
-            WHERE user_id = $1 
+            WHERE faculty_id = $1 
             AND EXTRACT(YEAR FROM leave_date) = $2
         `, [userId, currentYear]);
 
