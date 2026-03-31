@@ -395,35 +395,63 @@
         }
 
         for (const f of availableFaculty) {
-            const item = document.createElement('label');
+            const item = document.createElement('div');
             item.className = 'faculty-item';
             item.dataset.name = f.full_name.toLowerCase();
             item.dataset.dept = f.department.toLowerCase();
+            item.dataset.facultyId = f.id;
 
             item.innerHTML = `
-                <input type="checkbox" value="${f.id}">
-                <div class="faculty-item-info">
-                    <div class="faculty-item-name">${f.full_name}</div>
-                    <div class="faculty-item-dept">${f.department} • ${f.designation}</div>
+                <div class="faculty-item-main">
+                    <input type="checkbox" value="${f.id}">
+                    <div class="faculty-item-info">
+                        <div class="faculty-item-name">${f.full_name}</div>
+                        <div class="faculty-item-dept">${f.department} • ${f.designation}</div>
+                    </div>
+                </div>
+                <div class="faculty-item-alt-grid" style="display: none;">
+                    <div class="alt-hour-box">
+                        <label class="alt-hour-label">Hour 1</label>
+                        <select class="form-select alt-faculty-select" data-hour="1"><option value="">Select...</option></select>
+                    </div>
+                    <div class="alt-hour-box">
+                        <label class="alt-hour-label">Hour 2</label>
+                        <select class="form-select alt-faculty-select" data-hour="2"><option value="">Select...</option></select>
+                    </div>
+                    <div class="alt-hour-box">
+                        <label class="alt-hour-label">Hour 3</label>
+                        <select class="form-select alt-faculty-select" data-hour="3"><option value="">Select...</option></select>
+                    </div>
+                    <div class="alt-hour-box">
+                        <label class="alt-hour-label">Hour 4</label>
+                        <select class="form-select alt-faculty-select" data-hour="4"><option value="">Select...</option></select>
+                    </div>
+                    <div class="alt-hour-box">
+                        <label class="alt-hour-label">Hour 5</label>
+                        <select class="form-select alt-faculty-select" data-hour="5"><option value="">Select...</option></select>
+                    </div>
                 </div>
             `;
 
-            const checkbox = item.querySelector('input');
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            const altGrid = item.querySelector('.faculty-item-alt-grid');
+
+            // Click on the item (except the selects) toggles the checkbox
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.alt-faculty-select')) return;
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+
             checkbox.addEventListener('change', () => {
                 item.classList.toggle('checked', checkbox.checked);
-                
-                // Show Alternative Faculty section only if exactly ONE faculty is selected
-                const checkedCount = container.querySelectorAll('input[type="checkbox"]:checked').length;
-                const altSection = document.getElementById('modal-alt-section');
-                
-                if (altSection) {
-                    if (checkedCount === 1) {
-                        const selectedId = parseInt(container.querySelector('input[type="checkbox"]:checked').value);
-                        populateAltFacultyDropdowns(selectedId);
-                        altSection.style.display = 'block';
-                    } else {
-                        altSection.style.display = 'none';
-                    }
+                if (checkbox.checked) {
+                    populateItemAltDropdowns(altGrid, f.id);
+                    altGrid.style.display = 'grid';
+                } else {
+                    altGrid.style.display = 'none';
                 }
             });
 
@@ -431,19 +459,17 @@
         }
     }
 
-    function populateAltFacultyDropdowns(excludeId) {
-        const selects = document.querySelectorAll('.alt-faculty-select');
+    function populateItemAltDropdowns(grid, excludeId) {
+        const selects = grid.querySelectorAll('.alt-faculty-select');
         const availableForAlt = facultyList.filter(f => f.id !== excludeId);
         
         selects.forEach(select => {
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Faculty...</option>';
+            if (select.children.length > 1) return; // Already populated
             
             availableForAlt.forEach(f => {
                 const option = document.createElement('option');
                 option.value = f.id;
                 option.textContent = f.full_name;
-                if (parseInt(currentValue) === f.id) option.selected = true;
                 select.appendChild(option);
             });
         });
@@ -463,28 +489,30 @@
 
     // ─── Save New Leaves ───
     async function saveLeaves() {
-        const checkedBoxes = document.querySelectorAll('#faculty-checklist input[type="checkbox"]:checked');
-        const facultyIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
-
-        if (facultyIds.length === 0) {
+        const checkedItems = document.querySelectorAll('#faculty-checklist .faculty-item.checked');
+        
+        if (checkedItems.length === 0) {
             window.showToast('Please select at least one faculty member.', 'error');
             return;
         }
 
+        const leaves_to_save = Array.from(checkedItems).map(item => {
+            const fid = parseInt(item.dataset.facultyId);
+            const selects = item.querySelectorAll('.alt-faculty-select');
+            
+            const altData = {};
+            selects.forEach(s => {
+                altData[`alt_h${s.dataset.hour}`] = s.value ? parseInt(s.value) : null;
+            });
+
+            return {
+                faculty_id: fid,
+                ...altData
+            };
+        });
+
         const leaveType = document.getElementById('modal-leave-type').value;
         const reason = document.getElementById('modal-reason').value;
-
-        // Alternative faculty (only if exactly 1 faculty selected)
-        let altData = {};
-        if (facultyIds.length === 1) {
-            altData = {
-                alt_h1: document.getElementById('modal-alt-h1').value || null,
-                alt_h2: document.getElementById('modal-alt-h2').value || null,
-                alt_h3: document.getElementById('modal-alt-h3').value || null,
-                alt_h4: document.getElementById('modal-alt-h4').value || null,
-                alt_h5: document.getElementById('modal-alt-h5').value || null
-            };
-        }
 
         const saveBtn = document.getElementById('modal-save-btn');
         saveBtn.disabled = true;
@@ -496,18 +524,17 @@
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
-                    faculty_ids: facultyIds,
+                    leaves: leaves_to_save,
                     leave_date: selectedDate,
                     leave_type: leaveType,
-                    reason: reason,
-                    ...altData
+                    reason: reason
                 })
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                window.showToast(`${data.inserted} leave record(s) saved successfully!`, 'success');
+                window.showToast(`${data.count} leave record(s) saved successfully!`, 'success');
                 closeModal();
                 await renderCalendar(); // Refresh
             } else {

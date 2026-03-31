@@ -127,13 +127,13 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     }
 });
 
-// POST /api/leaves/bulk — mark multiple faculty as absent on a date (admin only)
+// POST /api/leaves/bulk — mark multiple faculty with individual details (admin only)
 router.post('/bulk', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const { faculty_ids, leave_date, leave_type, reason, alt_h1, alt_h2, alt_h3, alt_h4, alt_h5 } = req.body;
+        const { leaves, leave_date, leave_type, reason } = req.body;
         
-        if (!faculty_ids || !Array.isArray(faculty_ids) || faculty_ids.length === 0 || !leave_date || !leave_type) {
-            return res.status(400).json({ error: 'faculty_ids (array), leave_date, and leave_type are required.' });
+        if (!leaves || !Array.isArray(leaves) || leaves.length === 0 || !leave_date || !leave_type) {
+            return res.status(400).json({ error: 'leaves (array), leave_date, and leave_type are required.' });
         }
 
         const insertQuery = `
@@ -142,26 +142,37 @@ router.post('/bulk', requireAuth, requireRole('admin'), async (req, res) => {
                 alt_h1, alt_h2, alt_h3, alt_h4, alt_h5
             )
             VALUES ($1, TO_DATE($2, 'YYYY-MM-DD'), $3, $4, $5, $6, $7, $8, $9, $10)
-            ON CONFLICT (faculty_id, leave_date) DO NOTHING RETURNING id
+            ON CONFLICT (faculty_id, leave_date) 
+            DO UPDATE SET 
+                leave_type = EXCLUDED.leave_type,
+                reason = EXCLUDED.reason,
+                alt_h1 = EXCLUDED.alt_h1,
+                alt_h2 = EXCLUDED.alt_h2,
+                alt_h3 = EXCLUDED.alt_h3,
+                alt_h4 = EXCLUDED.alt_h4,
+                alt_h5 = EXCLUDED.alt_h5,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING id
         `;
 
-        console.log(`[API/leaves/bulk] Saving leaves for date: "${leave_date}", faculty_count: ${faculty_ids.length}, type: ${leave_type}`);
+        console.log(`[API/leaves/bulk] Saving ${leaves.length} leaves for date: "${leave_date}", type: ${leave_type}`);
 
-        let insertedCount = 0;
+        let processedCount = 0;
         
-        for (const fid of faculty_ids) {
+        for (const item of leaves) {
+            const fid = item.faculty_id;
             const insertRes = await db.query(insertQuery, [
                 fid, leave_date, leave_type, reason || '', req.session.user.id,
-                alt_h1 || null, alt_h2 || null, alt_h3 || null, alt_h4 || null, alt_h5 || null
+                item.alt_h1 || null, item.alt_h2 || null, item.alt_h3 || null, item.alt_h4 || null, item.alt_h5 || null
             ]);
             if (insertRes.rowCount > 0) {
-                insertedCount++;
+                processedCount++;
             }
         }
 
         res.status(201).json({
-            message: `${insertedCount} leave record(s) created successfully.`,
-            inserted: insertedCount
+            message: `${processedCount} leave record(s) processed successfully.`,
+            count: processedCount
         }); 
     } catch (err) {
         console.error('Bulk leave error:', err);
