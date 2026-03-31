@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     department VARCHAR(100) DEFAULT 'General',
     designation VARCHAR(100) DEFAULT '',
     email VARCHAR(255) DEFAULT '',
+    total_leaves INTEGER DEFAULT 25,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

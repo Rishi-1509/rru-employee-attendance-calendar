@@ -14,25 +14,28 @@ router.get('/summary', requireAuth, requireRole('admin', 'authority'), async (re
             return res.status(400).json({ error: '"from" and "to" date parameters are required.' });
         }
 
+        const currentYear = new Date().getFullYear();
         const result = await db.query(`
             SELECT
                 u.id,
                 u.full_name,
                 u.department,
                 u.designation,
-                COUNT(l.id)::int AS total_leaves,
-                SUM(CASE WHEN l.leave_type = 'casual' THEN 1 ELSE 0 END)::int AS casual_leaves,
-                SUM(CASE WHEN l.leave_type = 'medical' THEN 1 ELSE 0 END)::int AS medical_leaves,
-                SUM(CASE WHEN l.leave_type = 'earned' THEN 1 ELSE 0 END)::int AS earned_leaves,
-                SUM(CASE WHEN l.leave_type = 'duty' THEN 1 ELSE 0 END)::int AS duty_leaves,
-                SUM(CASE WHEN l.leave_type = 'other' THEN 1 ELSE 0 END)::int AS other_leaves
+                u.total_leaves AS annual_total,
+                (SELECT COUNT(*)::int FROM leaves l2 WHERE l2.faculty_id = u.id AND EXTRACT(YEAR FROM l2.leave_date) = $3) AS total_taken_this_year,
+                COUNT(l.id)::int AS leaves_in_period,
+                SUM(CASE WHEN l.leave_type = 'casual' THEN 1 ELSE 0 END)::int AS casual_leaves_period,
+                SUM(CASE WHEN l.leave_type = 'medical' THEN 1 ELSE 0 END)::int AS medical_leaves_period,
+                SUM(CASE WHEN l.leave_type = 'earned' THEN 1 ELSE 0 END)::int AS earned_leaves_period,
+                SUM(CASE WHEN l.leave_type = 'duty' THEN 1 ELSE 0 END)::int AS duty_leaves_period,
+                SUM(CASE WHEN l.leave_type = 'other' THEN 1 ELSE 0 END)::int AS other_leaves_period
             FROM users u
             LEFT JOIN leaves l ON u.id = l.faculty_id
                 AND l.leave_date >= $1 AND l.leave_date <= $2
             WHERE u.role = 'faculty'
-            GROUP BY u.id
+            GROUP BY u.id, u.full_name, u.department, u.designation, u.total_leaves
             ORDER BY u.full_name ASC
-        `, [from, to]);
+        `, [from, to, currentYear]);
 
         const summary = result.rows;
 
@@ -46,19 +49,25 @@ router.get('/summary', requireAuth, requireRole('admin', 'authority'), async (re
         }
 
         const enriched = summary.map(s => {
-            const total = parseInt(s.total_leaves) || 0;
+            const leavesInPeriod = parseInt(s.leaves_in_period) || 0;
+            const annualTotal = parseInt(s.annual_total) || 0;
+            const takenThisYear = parseInt(s.total_taken_this_year) || 0;
+            
             return {
                 ...s,
-                total_leaves: total,
-                casual_leaves: parseInt(s.casual_leaves) || 0,
-                medical_leaves: parseInt(s.medical_leaves) || 0,
-                earned_leaves: parseInt(s.earned_leaves) || 0,
-                duty_leaves: parseInt(s.duty_leaves) || 0,
-                other_leaves: parseInt(s.other_leaves) || 0,
+                leaves_in_period: leavesInPeriod,
+                annual_total: annualTotal,
+                total_taken_this_year: takenThisYear,
+                remaining_leaves: Math.max(0, annualTotal - takenThisYear),
+                casual_leaves: parseInt(s.casual_leaves_period) || 0,
+                medical_leaves: parseInt(s.medical_leaves_period) || 0,
+                earned_leaves: parseInt(s.earned_leaves_period) || 0,
+                duty_leaves: parseInt(s.duty_leaves_period) || 0,
+                other_leaves: parseInt(s.other_leaves_period) || 0,
                 working_days: workingDays,
-                present_days: workingDays - total,
+                present_days: workingDays - leavesInPeriod,
                 attendance_percentage: workingDays > 0
-                    ? Math.round(((workingDays - total) / workingDays) * 100 * 10) / 10
+                    ? Math.round(((workingDays - leavesInPeriod) / workingDays) * 100 * 10) / 10
                     : 100
             };
         });

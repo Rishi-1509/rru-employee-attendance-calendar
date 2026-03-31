@@ -92,8 +92,8 @@
         document.getElementById('report-stats').style.display = 'grid';
         document.getElementById('rstat-working-days').textContent = working_days;
 
-        const totalLeaves = summary.reduce((acc, s) => acc + s.total_leaves, 0);
-        document.getElementById('rstat-total-leaves').textContent = totalLeaves;
+        const totalLeavesInPeriod = summary.reduce((acc, s) => acc + s.leaves_in_period, 0);
+        document.getElementById('rstat-total-leaves').textContent = totalLeavesInPeriod;
 
         const avgAttendance = summary.length > 0
             ? (summary.reduce((acc, s) => acc + s.attendance_percentage, 0) / summary.length).toFixed(1)
@@ -126,7 +126,9 @@
                 <td>${s.earned_leaves || 0}</td>
                 <td>${s.duty_leaves || 0}</td>
                 <td>${s.other_leaves || 0}</td>
-                <td style="font-weight:700;">${s.total_leaves}</td>
+                <td style="font-weight:700;">${s.leaves_in_period}</td>
+                <td style="color:var(--blue-400); font-weight:600;">${s.annual_total}</td>
+                <td style="color:${s.remaining_leaves < 5 ? 'var(--error)' : 'var(--success)'}; font-weight:700;">${s.remaining_leaves}</td>
                 <td>
                     <div class="attendance-bar">
                         <div class="attendance-bar-fill ${barClass}" style="width:${s.attendance_percentage}%"></div>
@@ -195,15 +197,12 @@
 
         const { summary, from, to, working_days } = reportData;
 
-        let csv = 'Faculty Attendance Report\n';
-        csv += `Period: ${from} to ${to}\n`;
-        csv += `Working Days: ${working_days}\n\n`;
-        csv += '#,Faculty Name,Department,Designation,Casual,Medical,Earned,Duty,Other,Total Leaves,Present Days,Attendance %\n';
+        csv += '#,Faculty Name,Department,Designation,Casual,Medical,Earned,Duty,Other,Taken (Period),Annual Total,Remaining,Present Days,Attendance %\n';
 
         summary.forEach((s, idx) => {
             csv += `${idx + 1},"${s.full_name}","${s.department}","${s.designation}",`;
             csv += `${s.casual_leaves},${s.medical_leaves},${s.earned_leaves},${s.duty_leaves},${s.other_leaves},`;
-            csv += `${s.total_leaves},${s.present_days},${s.attendance_percentage}\n`;
+            csv += `${s.leaves_in_period},${s.annual_total},${s.remaining_leaves},${s.present_days},${s.attendance_percentage}\n`;
         });
 
         // Download

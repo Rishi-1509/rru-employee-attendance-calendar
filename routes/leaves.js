@@ -134,7 +134,7 @@ router.post('/bulk', requireAuth, requireRole('admin'), async (req, res) => {
         res.status(201).json({
             message: `${insertedCount} leave record(s) created successfully.`,
             inserted: insertedCount
-        });
+        }); 
     } catch (err) {
         console.error('Bulk leave error:', err);
         res.status(500).json({ error: 'Failed to record bulk leaves.' });
