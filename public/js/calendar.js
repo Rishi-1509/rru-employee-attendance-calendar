@@ -90,10 +90,24 @@
     }
 
     async function loadPersonalStats() {
+        console.log('Fetching personal leave summary...');
+        
+        // Show loading state
+        const els = {
+            taken: document.getElementById('stat-total-taken'),
+            remain: document.getElementById('stat-remaining-leaves'),
+            total: document.getElementById('stat-annual-total')
+        };
+        
+        if (els.taken) els.taken.textContent = '...';
+        if (els.remain) els.remain.textContent = '...';
+        if (els.total) els.total.textContent = '...';
+
         try {
             const res = await fetch('/api/faculty/me/summary', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
+                console.log('Leave summary data received:', data);
                 
                 const section = document.getElementById('user-attendance-profile');
                 if (section) section.style.display = 'block';
@@ -106,15 +120,16 @@
                 if (document.getElementById('profile-dept-large'))
                     document.getElementById('profile-dept-large').textContent = (window.currentUser.department || '') + ' • ' + (window.currentUser.designation || '');
 
-                if (document.getElementById('stat-total-taken')) 
-                    document.getElementById('stat-total-taken').textContent = data.total_taken_this_year;
-                if (document.getElementById('stat-remaining-leaves'))
-                    document.getElementById('stat-remaining-leaves').textContent = data.remaining_leaves;
-                if (document.getElementById('stat-annual-total'))
-                    document.getElementById('stat-annual-total').textContent = data.annual_total;
+                if (els.taken) els.taken.textContent = data.total_taken_this_year;
+                if (els.remain) els.remain.textContent = data.remaining_leaves;
+                if (els.total) els.total.textContent = data.annual_total;
+            } else {
+                console.warn('API returned error:', res.status);
+                if (els.remain) els.remain.textContent = 'Error';
             }
         } catch (err) {
             console.error('Failed to load personal stats:', err);
+            if (els.remain) els.remain.textContent = 'Error';
         }
     }
 
