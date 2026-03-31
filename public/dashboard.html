@@ -35,7 +35,7 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Admin Stats Bar (Hidden for Faculty) -->
+            <!-- Stats Bar (Admin Only) -->
             <div class="stats-bar" id="admin-stats-bar" style="display:none;">
                 <div class="stat-card">
                     <div class="stat-icon blue">👥</div>
@@ -67,73 +67,82 @@
                 </div>
             </div>
 
-            <!-- Faculty Personal Section (Exclusive to Faculty) -->
-            <div id="faculty-personal-section" style="display:none; margin-bottom: 24px; animation: slideUp 0.6s ease-out;">
-                <div class="glass-panel" style="padding: 24px; border-left: 6px solid var(--primary-500);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                        <h3 style="font-size: 1.125rem; color: #fff; display: flex; align-items: center; gap: 10px;">
-                            📊 My Attendance Profile
-                        </h3>
-                        <span class="nav-user-role" style="background: rgba(59, 130, 246, 0.2); padding: 4px 10px; border-radius: 99px;">Tracking Status: Active</span>
-                    </div>
-                    <div class="stats-bar" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-                        <div class="stat-card" style="background: rgba(255,255,255,0.06);">
-                            <div class="stat-icon purple">🗓️</div>
-                            <div>
-                                <div class="stat-value" id="stat-total-taken">—</div>
-                                <div class="stat-label">Total Taken (Year)</div>
-                            </div>
+            <div class="dashboard-flex-container">
+                <!-- Left: Calendar Section -->
+                <div class="calendar-section">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-btn" id="prev-month-btn" title="Previous Month">◀</button>
+                            <div class="calendar-month-title" id="calendar-month-title">—</div>
+                            <button class="calendar-nav-btn" id="next-month-btn" title="Next Month">▶</button>
                         </div>
-                        <div class="stat-card" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2);">
-                            <div class="stat-icon green">✨</div>
-                            <div>
-                                <div class="stat-value" id="stat-remaining-leaves" style="color:var(--success);">—</div>
-                                <div class="stat-label">Remaining Leaves</div>
-                            </div>
-                        </div>
-                        <div class="stat-card" style="background: rgba(255,255,255,0.06);">
-                            <div class="stat-icon blue">📋</div>
-                            <div>
-                                <div class="stat-value" id="stat-annual-total">—</div>
-                                <div class="stat-label">Annual Allotment</div>
+                        <div class="calendar-actions">
+                            <button class="btn btn-sm btn-secondary" id="today-btn">Today</button>
+                            <div class="legend">
+                                <div class="legend-item"><div class="legend-dot casual"></div>Cas.</div>
+                                <div class="legend-item"><div class="legend-dot medical"></div>Med.</div>
+                                <div class="legend-item"><div class="legend-dot earned"></div>Ear.</div>
+                                <div class="legend-item"><div class="legend-dot duty"></div>Dut.</div>
+                                <div class="legend-item"><div class="legend-dot other"></div>Oth.</div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Calendar Header -->
-            <div class="calendar-header">
-                <div class="calendar-nav">
-                    <button class="calendar-nav-btn" id="prev-month-btn" title="Previous Month">◀</button>
-                    <div class="calendar-month-title" id="calendar-month-title">—</div>
-                    <button class="calendar-nav-btn" id="next-month-btn" title="Next Month">▶</button>
-                </div>
-                <div class="calendar-actions">
-                    <button class="btn btn-sm btn-secondary" id="today-btn">Today</button>
-                    <div class="legend">
-                        <div class="legend-item"><div class="legend-dot casual"></div>Casual</div>
-                        <div class="legend-item"><div class="legend-dot medical"></div>Medical</div>
-                        <div class="legend-item"><div class="legend-dot earned"></div>Earned</div>
-                        <div class="legend-item"><div class="legend-dot duty"></div>Duty</div>
-                        <div class="legend-item"><div class="legend-dot other"></div>Other</div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <div class="calendar-weekdays">
+                            <div class="weekday">Sun</div>
+                            <div class="weekday">Mon</div>
+                            <div class="weekday">Tue</div>
+                            <div class="weekday">Wed</div>
+                            <div class="weekday">Thu</div>
+                            <div class="weekday">Fri</div>
+                            <div class="weekday">Sat</div>
+                        </div>
+                        <div class="calendar-days" id="calendar-days">
+                            <!-- Rendered by JS -->
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Calendar Grid -->
-            <div class="calendar-grid" id="calendar-grid">
-                <div class="calendar-weekdays">
-                    <div class="weekday">Sun</div>
-                    <div class="weekday">Mon</div>
-                    <div class="weekday">Tue</div>
-                    <div class="weekday">Wed</div>
-                    <div class="weekday">Thu</div>
-                    <div class="weekday">Fri</div>
-                    <div class="weekday">Sat</div>
-                </div>
-                <div class="calendar-days" id="calendar-days">
-                    <!-- Rendered by JS -->
+                <!-- Right: My Attendance Profile (Faculty Only) -->
+                <div id="faculty-profile-sidebar" class="profile-sidebar" style="display:none;">
+                    <div class="glass-panel profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar-large" id="profile-avatar-large">👤</div>
+                            <h3 id="profile-name-large">Faculty Name</h3>
+                            <p id="profile-dept-large" class="text-secondary">Department</p>
+                        </div>
+                        
+                        <div class="profile-stats">
+                            <div class="profile-stat-item">
+                                <div class="profile-stat-icon purple">📊</div>
+                                <div class="profile-stat-info">
+                                    <div class="profile-stat-label">Leaves Taken (Year)</div>
+                                    <div class="profile-stat-value" id="stat-total-taken">—</div>
+                                </div>
+                            </div>
+                            
+                            <div class="profile-stat-item highlight">
+                                <div class="profile-stat-icon green">✨</div>
+                                <div class="profile-stat-info">
+                                    <div class="profile-stat-label">Remaining Balance</div>
+                                    <div class="profile-stat-value" id="stat-remaining-leaves">—</div>
+                                </div>
+                            </div>
+                            
+                            <div class="profile-stat-item">
+                                <div class="profile-stat-icon blue">🏆</div>
+                                <div class="profile-stat-info">
+                                    <div class="profile-stat-label">Annual Allotment</div>
+                                    <div class="profile-stat-value" id="stat-annual-total">—</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-footer">
+                            <p class="profile-tip">💡 Tip: You can view details of any marked leave by clicking on the date in the calendar.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
