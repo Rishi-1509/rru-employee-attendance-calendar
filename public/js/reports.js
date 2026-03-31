@@ -170,11 +170,26 @@
                             weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
                         });
 
+                        const hasSubstitution = leave.alt_h1_name || leave.alt_h2_name || leave.alt_h3_name || leave.alt_h4_name || leave.alt_h5_name;
+                        let subHtml = '—';
+                        if (hasSubstitution) {
+                            subHtml = `
+                                <div style="display:flex; flex-direction:column; gap:2px; font-size:0.7rem;">
+                                    ${leave.alt_h1_name ? `<span>H1: ${leave.alt_h1_name}</span>` : ''}
+                                    ${leave.alt_h2_name ? `<span>H2: ${leave.alt_h2_name}</span>` : ''}
+                                    ${leave.alt_h3_name ? `<span>H3: ${leave.alt_h3_name}</span>` : ''}
+                                    ${leave.alt_h4_name ? `<span>H4: ${leave.alt_h4_name}</span>` : ''}
+                                    ${leave.alt_h5_name ? `<span>H5: ${leave.alt_h5_name}</span>` : ''}
+                                </div>
+                            `;
+                        }
+
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${formattedDate}</td>
                             <td><span class="leave-badge ${leave.leave_type}">${leave.leave_type}</span></td>
                             <td>${leave.reason || '—'}</td>
+                            <td>${subHtml}</td>
                             <td>${leave.marked_by_name}</td>
                         `;
                         tbody.appendChild(row);

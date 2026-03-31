@@ -306,10 +306,28 @@
 
                 const typeClass = getLeaveTypeColor(leave.leave_type);
 
+                const hasSubstitution = leave.alt_h1_name || leave.alt_h2_name || leave.alt_h3_name || leave.alt_h4_name || leave.alt_h5_name;
+                let subHtml = '';
+                if (hasSubstitution) {
+                    subHtml = `
+                        <div class="alt-assignment-display" style="margin-top: 8px; font-size: 0.75rem; color: var(--gray-400); background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px;">
+                            <strong>Substitution:</strong>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+                                ${leave.alt_h1_name ? `<span title="Hour 1">H1: ${leave.alt_h1_name}</span>` : ''}
+                                ${leave.alt_h2_name ? `<span title="Hour 2">H2: ${leave.alt_h2_name}</span>` : ''}
+                                ${leave.alt_h3_name ? `<span title="Hour 3">H3: ${leave.alt_h3_name}</span>` : ''}
+                                ${leave.alt_h4_name ? `<span title="Hour 4">H4: ${leave.alt_h4_name}</span>` : ''}
+                                ${leave.alt_h5_name ? `<span title="Hour 5">H5: ${leave.alt_h5_name}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 item.innerHTML = `
                     <div class="absent-item-info">
                         <div class="absent-item-name">${leave.faculty_name}</div>
                         <div class="absent-item-details">${leave.department} • ${leave.designation}${leave.reason ? ' • ' + leave.reason : ''}</div>
+                        ${subHtml}
                     </div>
                     <span class="absent-item-type leave-badge ${leave.leave_type}">${leave.leave_type}</span>
                     ${isAdmin ? `<button class="absent-item-remove" data-leave-id="${leave.id}" data-faculty-id="${leave.faculty_id}" title="Remove">✕</button>` : ''}
@@ -338,12 +356,21 @@
             saveBtn.style.display = 'inline-flex';
             document.getElementById('modal-title').textContent = 'Manage Leave';
 
+            // Reset and hide alternative faculty section by default
+            const altSection = document.getElementById('modal-alt-section');
+            if (altSection) {
+                altSection.style.display = 'none';
+                altSection.querySelectorAll('select').forEach(sel => sel.value = '');
+            }
+
             // Populate faculty checklist (exclude already absent)
             const absentIds = new Set(leaves.map(l => l.faculty_id));
             renderFacultyChecklist(absentIds);
         } else {
             addSection.style.display = 'none';
             saveBtn.style.display = 'none';
+            const altSection = document.getElementById('modal-alt-section');
+            if (altSection) altSection.style.display = 'none';
             document.getElementById('modal-title').textContent = 'Attendance Details';
         }
 
@@ -384,10 +411,42 @@
             const checkbox = item.querySelector('input');
             checkbox.addEventListener('change', () => {
                 item.classList.toggle('checked', checkbox.checked);
+                
+                // Show Alternative Faculty section only if exactly ONE faculty is selected
+                const checkedCount = container.querySelectorAll('input[type="checkbox"]:checked').length;
+                const altSection = document.getElementById('modal-alt-section');
+                
+                if (altSection) {
+                    if (checkedCount === 1) {
+                        const selectedId = parseInt(container.querySelector('input[type="checkbox"]:checked').value);
+                        populateAltFacultyDropdowns(selectedId);
+                        altSection.style.display = 'block';
+                    } else {
+                        altSection.style.display = 'none';
+                    }
+                }
             });
 
             container.appendChild(item);
         }
+    }
+
+    function populateAltFacultyDropdowns(excludeId) {
+        const selects = document.querySelectorAll('.alt-faculty-select');
+        const availableForAlt = facultyList.filter(f => f.id !== excludeId);
+        
+        selects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Faculty...</option>';
+            
+            availableForAlt.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f.id;
+                option.textContent = f.full_name;
+                if (parseInt(currentValue) === f.id) option.selected = true;
+                select.appendChild(option);
+            });
+        });
     }
 
     function filterFacultyList() {
@@ -415,6 +474,18 @@
         const leaveType = document.getElementById('modal-leave-type').value;
         const reason = document.getElementById('modal-reason').value;
 
+        // Alternative faculty (only if exactly 1 faculty selected)
+        let altData = {};
+        if (facultyIds.length === 1) {
+            altData = {
+                alt_h1: document.getElementById('modal-alt-h1').value || null,
+                alt_h2: document.getElementById('modal-alt-h2').value || null,
+                alt_h3: document.getElementById('modal-alt-h3').value || null,
+                alt_h4: document.getElementById('modal-alt-h4').value || null,
+                alt_h5: document.getElementById('modal-alt-h5').value || null
+            };
+        }
+
         const saveBtn = document.getElementById('modal-save-btn');
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
@@ -428,7 +499,8 @@
                     faculty_ids: facultyIds,
                     leave_date: selectedDate,
                     leave_type: leaveType,
-                    reason: reason
+                    reason: reason,
+                    ...altData
                 })
             });
 

@@ -104,9 +104,17 @@ router.get('/faculty/:id', requireAuth, async (req, res) => {
 
         let query = `
             SELECT l.id, TO_CHAR(l.leave_date, 'YYYY-MM-DD') as leave_date, l.leave_type, l.reason, l.created_at,
-                   m.full_name AS marked_by_name
+                   m.full_name AS marked_by_name,
+                   h1.full_name AS alt_h1_name, h2.full_name AS alt_h2_name,
+                   h3.full_name AS alt_h3_name, h4.full_name AS alt_h4_name,
+                   h5.full_name AS alt_h5_name
             FROM leaves l
             JOIN users m ON l.marked_by = m.id
+            LEFT JOIN users h1 ON l.alt_h1 = h1.id
+            LEFT JOIN users h2 ON l.alt_h2 = h2.id
+            LEFT JOIN users h3 ON l.alt_h3 = h3.id
+            LEFT JOIN users h4 ON l.alt_h4 = h4.id
+            LEFT JOIN users h5 ON l.alt_h5 = h5.id
             WHERE l.faculty_id = $1
         `;
         const params = [id];

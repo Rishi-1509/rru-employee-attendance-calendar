@@ -20,6 +20,11 @@ CREATE TABLE IF NOT EXISTS leaves (
     leave_type VARCHAR(50) NOT NULL CHECK(leave_type IN ('casual', 'medical', 'earned', 'duty', 'other')),
     reason TEXT DEFAULT '',
     marked_by INTEGER NOT NULL REFERENCES users(id),
+    alt_h1 INTEGER REFERENCES users(id),
+    alt_h2 INTEGER REFERENCES users(id),
+    alt_h3 INTEGER REFERENCES users(id),
+    alt_h4 INTEGER REFERENCES users(id),
+    alt_h5 INTEGER REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(faculty_id, leave_date)
