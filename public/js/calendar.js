@@ -30,10 +30,11 @@
                 if (window.currentUser.role === 'admin' || window.currentUser.role === 'authority') {
                     const adminBar = document.getElementById('admin-stats-bar');
                     if (adminBar) adminBar.style.display = 'grid';
+                    const profileBar = document.getElementById('user-attendance-profile');
+                    if (profileBar) profileBar.style.display = 'none';
+                } else if (window.currentUser.role === 'faculty') {
+                    loadPersonalStats();
                 }
-                
-                // Show the Attendance Profile for everyone
-                loadPersonalStats();
                 renderCalendar();
             }
         }, 100);
