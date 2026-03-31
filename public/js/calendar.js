@@ -26,6 +26,13 @@
                 clearInterval(waitForUser);
                 setupEventListeners();
                 loadFacultyList();
+                
+                if (window.currentUser.role === 'admin' || window.currentUser.role === 'authority') {
+                    const adminBar = document.getElementById('admin-stats-bar');
+                    if (adminBar) adminBar.style.display = 'grid';
+                } else if (window.currentUser.role === 'faculty') {
+                    loadPersonalStats();
+                }
                 renderCalendar();
             }
         }, 100);
@@ -78,6 +85,27 @@
             }
         } catch (err) {
             console.error('Failed to load faculty:', err);
+        }
+    }
+
+    async function loadPersonalStats() {
+        try {
+            const res = await fetch('/api/faculty/me/summary', { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                
+                const section = document.getElementById('faculty-personal-section');
+                if (section) section.style.display = 'block';
+                
+                if (document.getElementById('stat-total-taken')) 
+                    document.getElementById('stat-total-taken').textContent = data.total_taken_this_year;
+                if (document.getElementById('stat-remaining-leaves'))
+                    document.getElementById('stat-remaining-leaves').textContent = data.remaining_leaves;
+                if (document.getElementById('stat-annual-total'))
+                    document.getElementById('stat-annual-total').textContent = data.annual_total;
+            }
+        } catch (err) {
+            console.error('Failed to load personal stats:', err);
         }
     }
 
